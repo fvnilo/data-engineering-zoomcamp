@@ -1,0 +1,48 @@
+services:
+  database:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_DB
+    volumes:
+      - "./ny_taxi_postgres_data:/var/lib/postgresql/data:rw"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+    ports:
+      - "5432:5432"
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      - PGADMIN_DEFAULT_EMAIL
+      - PGADMIN_DEFAULT_PASSWORD
+    ports:
+      - "8080:80"
+
+  ingest:
+    build: .
+    environment:
+      - DB_USER
+      - DB_PASSWORD
+      - DB_PORT
+      - DB_NAME
+      - TABLE_NAME
+      - DATASET_URL
+    depends_on:
+      database:
+        condition: service_healthy
+        restart: true
+    command:
+      - --host=database
+      - --user=${DB_USER}
+      - --password=${DB_PASSWORD}
+      - --port=${DB_PORT}
+      - --db=${DB_NAME}
+      - --table_name=${TABLE_NAME}
+      - --url=${DATASET_URL}
+    restart: no
