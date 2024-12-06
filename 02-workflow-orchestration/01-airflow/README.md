@@ -45,3 +45,8 @@
 
 - Changing the environment variable `AIRFLOW__CORE__LOAD_EXAMPLES` to false will hide default examples.
 - I decided to rewrite the code using Taskflow API to try out a more modern approach to writing a DAG.
+- The `.env` file must also have these variables defined:
+    - `GCP_PROJECT_ID`
+    - `GCP_GCS_BUCKET`
+    - `GCP_CREDENTIALS_FILE`
+    - `GCP_BIGQUERY_DATASET`
