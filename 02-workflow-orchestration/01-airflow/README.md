@@ -44,3 +44,4 @@
 ## Notes
 
 - Changing the environment variable `AIRFLOW__CORE__LOAD_EXAMPLES` to false will hide default examples.
+- I decided to rewrite the code using Taskflow API to try out a more modern approach to writing a DAG.

@@ -3,57 +3,52 @@ import requests
 
 from datetime import datetime
 
-from airflow import DAG
-from airflow.decorators import task
-from airflow.utils.dates import days_ago
-from airflow.providers.google.cloud.operators.bigquery import BigQueryCreateExternalTableOperator
-from airflow.providers.google.cloud.transfers.local_to_gcs import LocalFilesystemToGCSOperator
+from airflow.decorators import dag, task
 
-
+# Environment variables
 PROJECT_ID = os.environ.get("GCP_PROJECT_ID")
 BUCKET = os.environ.get("GCP_GCS_BUCKET")
 BIGQUERY_DATASET = os.environ.get("GCP_BIGQUERY_DATASET")
+AIRFLOW_HOME = os.environ.get("AIRFLOW_HOME", "/opt/airflow/")
 
-DATASET_URL_FORMAT = "https://d37ci6vzurychx.cloudfront.net/trip-data/{}"
-DATASET_FILE_FORMAT = "yellow_tripdata_{}.parquet"
-
-PATH_TO_LOCAL_HOME = os.environ.get("AIRFLOW_HOME", "/opt/airflow/")
-
+# Default DAG arguments
 default_args = {
     "owner": "airflow",
-    "start_date": days_ago(1),
+    "start_date": datetime(2023, 12, 1),
     "depends_on_past": False,
     "retries": 1,
 }
 
-with DAG(
+
+@dag(
     dag_id="data_ingestion_gcs",
     schedule_interval="@daily",
     default_args=default_args,
     catchup=False,
     max_active_runs=1,
-    params={"run_date": None},
-    tags=['dtc-de'],
-) as dag:
-    
+    params={"run_date": None},  # Allow parameterized DAG runs
+    tags=["dtc-de"],
+)
+def data_ingestion_dag():
+
     @task()
     def get_dataset_file(run_date=None):
         """
-        Determines the dataset file to use based on the provided DAG run configuration
+        Determines the dataset file to use based on DAG parameter `run_date`
         or defaults to the current month.
         """
         if not run_date:
-            # Default to current month dataset if no config provided
+            # Default to current month dataset if no param provided
             current_month = datetime.now().strftime("%Y-%m")
-            return DATASET_FILE_FORMAT.format(current_month)
+            return f"yellow_tripdata_{current_month}.parquet"
         
-        return DATASET_FILE_FORMAT.format(run_date)
+        return f"yellow_tripdata_{run_date}.parquet"
 
     @task()
-    def download_dataset(dataset_file: str):
-        dataset_url = DATASET_URL_FORMAT.format(dataset_file)
-        local_filepath = f"{PATH_TO_LOCAL_HOME}/{dataset_file}"
-
+    def download_dataset(dataset_file):
+        dataset_url = f"https://d37ci6vzurychx.cloudfront.net/trip-data/{dataset_file}"
+        local_filepath = f"{AIRFLOW_HOME}/{dataset_file}"
+        
         response = requests.get(dataset_url, stream=True)
         response.raise_for_status()
 
@@ -63,31 +58,38 @@ with DAG(
 
         return local_filepath
 
-    upload_to_gcs = LocalFilesystemToGCSOperator(
-        task_id="upload_to_gcs",
-        src="{{ task_instance.xcom_pull(task_ids='download_dataset') }}",
-        dst="raw/{{ task_instance.xcom_pull(task_ids='get_dataset_file') }}",
-        bucket=BUCKET,
-    )
+    @task()
+    def upload_to_gcs_task(local_filepath, dataset_file):
+        from airflow.providers.google.cloud.hooks.gcs import GCSHook
 
-    create_bigquery_table = BigQueryCreateExternalTableOperator(
-        task_id="create_bigquery_table",
-        table_resource={
-            "tableReference": {
-                "projectId": PROJECT_ID,
-                "datasetId": BIGQUERY_DATASET,
-                "tableId": "external_table",
-            },
-            "externalDataConfiguration": {
-                "sourceFormat": "PARQUET",
-                "sourceUris": [
-                    f"gs://{BUCKET}/raw/{{ task_instance.xcom_pull(task_ids='get_dataset_file') }}"
-                ],
-            },
-        },
-    )
+        gcs_hook = GCSHook()
+        destination_path = f"raw/{dataset_file}"
+        gcs_hook.upload(bucket_name=BUCKET, object_name=destination_path, filename=local_filepath)
 
+        return f"gs://{BUCKET}/{destination_path}"
+
+    @task()
+    def create_bigquery_table_task(gcs_uri):
+        from google.cloud import bigquery
+
+        client = bigquery.Client(project=PROJECT_ID)
+        table_id = f"{PROJECT_ID}.{BIGQUERY_DATASET}.external_table"
+
+        external_config = bigquery.ExternalConfig("PARQUET")
+        external_config.source_uris = [gcs_uri]
+        
+        table = bigquery.Table(table_id)
+        table.external_data_configuration = external_config
+
+        table = client.create_table(table, exists_ok=True)
+        return table_id
+
+    # Fetch the dataset file dynamically based on DAG parameter or default to current month
     run_date = "{{ params.run_date }}"
     dataset_file = get_dataset_file(run_date=run_date)
-    downloaded_file = download_dataset(dataset_file)
-    downloaded_file >> upload_to_gcs >> create_bigquery_table
+    local_filepath = download_dataset(dataset_file)
+    gcs_uri = upload_to_gcs_task(local_filepath, dataset_file)
+    create_bigquery_table_task(gcs_uri)
+
+# Instantiate the DAG
+dag = data_ingestion_dag()
