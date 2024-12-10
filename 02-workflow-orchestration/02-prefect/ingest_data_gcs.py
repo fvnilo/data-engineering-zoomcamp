@@ -53,12 +53,9 @@ def write_gcs(path: Path, bucket: str) -> None:
 
 
 @flow()
-def etl_web_to_gcs(params) -> None:
+def etl_web_to_gcs(bucket, year, month, color) -> None:
     """The main ETL function"""
 
-    color = "yellow"
-    year = 2021
-    month = 1
     dataset_file = f"{color}_tripdata_{year}-{month:02}"
     dataset_url = f"https://github.com/DataTalksClub/nyc-tlc-data/releases/download/{color}/{dataset_file}.csv.gz"
 
@@ -66,14 +63,22 @@ def etl_web_to_gcs(params) -> None:
     df_clean = clean(df)
     path = write_local(df_clean, color, dataset_file)
 
-    write_gcs(path, params.bucket)
+    write_gcs(path, bucket)
+
+
+@flow()
+def etl_parent_flow(
+    bucket: str, months: list[int] = [1, 2], year: int = 2021, color: str = "yellow", 
+):
+    for month in months:
+        etl_web_to_gcs(bucket, year, month, color)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Transform CSV data to Parquet and Upload To GCS')
 
-    parser.add_argument('--bucket', help='the name of the GCS bucket to upload to')
+    parser.add_argument('--bucket', help='The name of the GCS bucket to upload to')
 
     args = parser.parse_args()
 
-    etl_web_to_gcs(args)
+    etl_parent_flow(args.bucket)
