@@ -1,4 +1,5 @@
 import argparse
+import os
 import pandas as pd
 
 from pathlib import Path
@@ -34,6 +35,8 @@ def clean(df: pd.DataFrame) -> pd.DataFrame:
 def write_local(df: pd.DataFrame, color: str, dataset_file: str) -> Path:
     """Write DataFrame out locally as parquet file"""
 
+    Path(f"data/{color}").mkdir(parents=True, exist_ok=True)
+    
     path = Path(f"data/{color}/{dataset_file}.parquet")
     df.to_parquet(path, compression="gzip")
     
