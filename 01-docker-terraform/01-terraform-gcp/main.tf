@@ -8,7 +8,6 @@ terraform {
 }
 
 ###################################################
-#                                                 #
 # We are expecting these env vars to be defined:  #
 #                                                 #
 # - GOOGLE_PROJECT                                #
@@ -19,7 +18,7 @@ provider "google" {}
 
 data "google_project" "current" {}
 
-resource "google_storage_bucket" "demo_bucket" {
+resource "google_storage_bucket" "nyc_taxi_data" {
   name          = "${var.gcs_bucket_name}-${data.google_project.current.number}"
   location      = var.location
   force_destroy = true
@@ -35,7 +34,7 @@ resource "google_storage_bucket" "demo_bucket" {
   }
 }
 
-resource "google_bigquery_dataset" "demo_dataset" {
+resource "google_bigquery_dataset" "nyc_taxi" {
   dataset_id = "${var.bq_dataset_name}_${data.google_project.current.number}"
   location   = var.location
 }

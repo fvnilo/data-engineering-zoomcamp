@@ -1,5 +1,4 @@
 import argparse
-import os
 import pandas as pd
 
 from pathlib import Path
@@ -21,8 +20,12 @@ def fetch(dataset_url: str) -> pd.DataFrame:
 def clean(df: pd.DataFrame) -> pd.DataFrame:
     """Fix dtype issues"""
 
-    df["tpep_pickup_datetime"] = pd.to_datetime(df["tpep_pickup_datetime"])
-    df["tpep_dropoff_datetime"] = pd.to_datetime(df["tpep_dropoff_datetime"])
+    df["tpep_pickup_datetime"] = df["tpep_pickup_datetime"].astype("datetime64[ms]")
+    df["tpep_dropoff_datetime"] = df["tpep_dropoff_datetime"].astype("datetime64[ms]")
+    df["passenger_count"] = df["passenger_count"].astype("Int64")
+    df["payment_type"] = df["payment_type"].astype("Int64")
+    df["RatecodeID"] = df["RatecodeID"].astype("Int64")
+    df["VendorID"] = df["VendorID"].astype("Int64")
     
     print(df.head(2))
     print(f"columns: {df.dtypes}")
@@ -81,7 +84,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Transform CSV data to Parquet and Upload To GCS')
 
     parser.add_argument('--bucket', help='The name of the GCS bucket to upload to')
+    parser.add_argument('--year', help='The year of the data set to use', type=int)
+    parser.add_argument('--months', nargs='+', help='The months of the data set to use', type=int)
+    parser.add_argument('--color', help='The color of the data set to use', default="yellow")
 
     args = parser.parse_args()
 
-    etl_parent_flow(args.bucket)
+    etl_parent_flow(
+        bucket= args.bucket,
+        months= args.months,
+        year= args.year,
+        color= args.color,
+    )
