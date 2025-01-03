@@ -9,6 +9,17 @@ OPTIONS (
   ]
 );
 
+-- Create external table interfacing the dataset in GCS
+CREATE OR REPLACE EXTERNAL TABLE `$project_id.$dataset.green_tripdata`
+OPTIONS (
+  format = 'PARQUET',
+  uris = [
+    'gs://nyc-taxi-rides-data-436528245115/data/green/green_tripdata_2019-*.parquet', 
+    'gs://nyc-taxi-rides-data-436528245115/data/green/green_tripdata_2020-*.parquet',
+    'gs://nyc-taxi-rides-data-436528245115/data/green/green_tripdata_2021-*.parquet'
+  ]
+);
+
 -- Check yellow trip data
 SELECT * FROM $project_id.$dataset.yellow_tripdata limit 10;
 
@@ -57,14 +68,3 @@ SELECT count(*) as trips
 FROM $project_id.$dataset.yellow_tripdata_partitoned_clustered
 WHERE DATE(tpep_pickup_datetime) BETWEEN '2019-06-01' AND '2020-12-31'
   AND VendorID=1;
-
--- Create external table interfacing the dataset in GCS
-CREATE OR REPLACE EXTERNAL TABLE `$project_id.$dataset.green_tripdata`
-OPTIONS (
-  format = 'PARQUET',
-  uris = [
-    'gs://nyc-taxi-rides-data-436528245115/data/green/green_tripdata_2019-*.parquet', 
-    'gs://nyc-taxi-rides-data-436528245115/data/green/green_tripdata_2020-*.parquet',
-    'gs://nyc-taxi-rides-data-436528245115/data/green/green_tripdata_2021-*.parquet'
-  ]
-);

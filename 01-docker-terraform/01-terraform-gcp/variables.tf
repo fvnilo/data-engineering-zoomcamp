@@ -1,7 +1,7 @@
 variable "location" {
   description = "Project Location"
   type        = string
-  default     = "northamerica-northeast1"
+  default     = "US"
 }
 
 variable "bq_dataset_name" {
