@@ -32,6 +32,7 @@ def clean(df: pd.DataFrame, color: str) -> pd.DataFrame:
     if color == "green":
         df["lpep_pickup_datetime"] = df["lpep_pickup_datetime"].astype("datetime64[ms]")
         df["lpep_dropoff_datetime"] = df["lpep_dropoff_datetime"].astype("datetime64[ms]")
+        df["trip_type"] = df["trip_type"].astype("Int64")
     
     print(df.head(2))
     print(f"columns: {df.dtypes}")
