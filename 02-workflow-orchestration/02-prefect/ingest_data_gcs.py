@@ -17,15 +17,21 @@ def fetch(dataset_url: str) -> pd.DataFrame:
 
 
 @task(log_prints=True)
-def clean(df: pd.DataFrame) -> pd.DataFrame:
+def clean(df: pd.DataFrame, color: str) -> pd.DataFrame:
     """Fix dtype issues"""
 
-    df["tpep_pickup_datetime"] = df["tpep_pickup_datetime"].astype("datetime64[ms]")
-    df["tpep_dropoff_datetime"] = df["tpep_dropoff_datetime"].astype("datetime64[ms]")
     df["passenger_count"] = df["passenger_count"].astype("Int64")
     df["payment_type"] = df["payment_type"].astype("Int64")
     df["RatecodeID"] = df["RatecodeID"].astype("Int64")
     df["VendorID"] = df["VendorID"].astype("Int64")
+
+    if color == "yellow":
+        df["tpep_pickup_datetime"] = df["tpep_pickup_datetime"].astype("datetime64[ms]")
+        df["tpep_dropoff_datetime"] = df["tpep_dropoff_datetime"].astype("datetime64[ms]")    
+    
+    if color == "green":
+        df["lpep_pickup_datetime"] = df["lpep_pickup_datetime"].astype("datetime64[ms]")
+        df["lpep_dropoff_datetime"] = df["lpep_dropoff_datetime"].astype("datetime64[ms]")
     
     print(df.head(2))
     print(f"columns: {df.dtypes}")
@@ -66,7 +72,7 @@ def etl_web_to_gcs(bucket, year, month, color) -> None:
     dataset_url = f"https://github.com/DataTalksClub/nyc-tlc-data/releases/download/{color}/{dataset_file}.csv.gz"
 
     df = fetch(dataset_url)
-    df_clean = clean(df)
+    df_clean = clean(df, color)
     path = write_local(df_clean, color, dataset_file)
 
     write_gcs(path, bucket)

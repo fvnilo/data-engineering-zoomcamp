@@ -34,7 +34,7 @@ resource "google_storage_bucket" "nyc_taxi_data" {
   }
 }
 
-resource "google_bigquery_dataset" "nyc_taxi" {
-  dataset_id = "${var.bq_dataset_name}_${data.google_project.current.number}"
+resource "google_bigquery_dataset" "trips_data" {
+  dataset_id = "${var.bq_dataset_name}"
   location   = var.location
 }

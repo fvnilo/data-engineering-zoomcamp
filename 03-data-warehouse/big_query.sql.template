@@ -1,5 +1,5 @@
 -- Create external table interfacing the dataset in GCS
-CREATE OR REPLACE EXTERNAL TABLE `$project_id.$dataset.external_yellow_tripdata`
+CREATE OR REPLACE EXTERNAL TABLE `$project_id.$dataset.yellow_tripdata`
 OPTIONS (
   format = 'PARQUET',
   uris = [
@@ -10,18 +10,18 @@ OPTIONS (
 );
 
 -- Check yellow trip data
-SELECT * FROM $project_id.$dataset.external_yellow_tripdata limit 10;
+SELECT * FROM $project_id.$dataset.yellow_tripdata limit 10;
 
 -- Create a non partitioned table from external table
 CREATE OR REPLACE TABLE $project_id.$dataset.yellow_tripdata_non_partitoned AS
-SELECT * FROM $project_id.$dataset.external_yellow_tripdata;
+SELECT * FROM $project_id.$dataset.yellow_tripdata;
 
 
 -- Create a partitioned table from external table
 CREATE OR REPLACE TABLE $project_id.$dataset.yellow_tripdata_partitoned
 PARTITION BY
   DATE(tpep_pickup_datetime) AS
-SELECT * FROM $project_id.$dataset.external_yellow_tripdata;
+SELECT * FROM $project_id.$dataset.yellow_tripdata;
 
 -- Impact of partition
 -- Scanning 1.6GB of data
@@ -44,7 +44,7 @@ ORDER BY total_rows DESC;
 CREATE OR REPLACE TABLE $project_id.$dataset.yellow_tripdata_partitoned_clustered
 PARTITION BY DATE(tpep_pickup_datetime)
 CLUSTER BY VendorID AS
-SELECT * FROM $project_id.$dataset.external_yellow_tripdata;
+SELECT * FROM $project_id.$dataset.yellow_tripdata;
 
 -- Query scans 1.1 GB
 SELECT count(*) as trips
@@ -57,3 +57,14 @@ SELECT count(*) as trips
 FROM $project_id.$dataset.yellow_tripdata_partitoned_clustered
 WHERE DATE(tpep_pickup_datetime) BETWEEN '2019-06-01' AND '2020-12-31'
   AND VendorID=1;
+
+-- Create external table interfacing the dataset in GCS
+CREATE OR REPLACE EXTERNAL TABLE `$project_id.$dataset.green_tripdata`
+OPTIONS (
+  format = 'PARQUET',
+  uris = [
+    'gs://nyc-taxi-rides-data-436528245115/data/green/green_tripdata_2019-*.parquet', 
+    'gs://nyc-taxi-rides-data-436528245115/data/green/green_tripdata_2020-*.parquet',
+    'gs://nyc-taxi-rides-data-436528245115/data/green/green_tripdata_2021-*.parquet'
+  ]
+);
