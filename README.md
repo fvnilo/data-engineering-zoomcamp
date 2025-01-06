@@ -13,3 +13,7 @@
 
 - [Airflow](/02-workflow-orchestration/01-airflow/README.md)
 - [Prefect](/02-workflow-orchestration/02-prefect/README.md)
+
+### [03 - Data Warehouse](/03-data-warehouse/README.md)
+
+### [04 - Analytics Engineering](/04-analytics-engineering/README.md)
